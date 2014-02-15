@@ -695,3 +695,42 @@ Grub2:
 	5配置grub2: grub-mkconfig
 	            grub-mkconfig -o /boot/grub/grub.cfg
 				
+
+
+11、结束Gentoo的安装
+	a、用户管理
+	为日常使用添加一个用户
+		在Unix/Linux系统中，用root进行工作是一件危险的事情，应该尽量避免。因此我们强烈推荐您为日常使用添加一个普通用户。
+		用户所属的组定义了其可以执行的活动。下表中列出了许多您可能希望使用的重要组：
+
+		组	描述
+		audio	允许使用声音设备
+		cdrom	允许直接使用光驱
+		floppy	允许直接使用软驱
+		games	允许运行游戏
+		portage	允许以普通用户的身份执行emerge --pretend
+		usb	允许使用USB设备
+		plugdev	 允许挂载和使用可拔插设备，例如摄像头和U盘
+		video	 允许使用视频采集设备和硬件加速
+		wheel	允许使用su
+		例如，要创建一个名为john的用户，并使其隶属于wheel组，users组和audio组，请先用root用户登录（只有root有权限创建用户），然后执行useradd命令：
+
+		代码 1.1: 添加一个日常使用的用户
+		Login: root
+		Password: (您的root密码)
+
+		# useradd -m -G users,wheel,audio -s /bin/bash john
+		# passwd john
+		Password: （输入john用户使用的密码）
+		Re-enter password: （再次输入以便进行校验）
+		有时，普通用户可能需要以root身份执行一些任务，这时您可以使用su -来临时取得root权限。另外一种方法就是使用sudo包，如果配置正确，使用它将会非常安全。
+	b、磁盘清理
+
+	移除tarball
+
+	现在您的gentoo已经结束了安装并完成了重启，如果一切顺利，您就可以将下载下来的stage3 tarball和Portage快照文件从硬盘里清除掉了。请记住它们是被下载到您的/目录中的。
+
+	代码 2.1: 移除stage3 tarball
+	# rm /stage3-*.tar.bz2*
+	代码 2.2: 移除Portage快照文件
+	# rm /portage-latest.tar.bz2*
