@@ -724,12 +724,10 @@ Grub2:
 		Password: （输入john用户使用的密码）
 		Re-enter password: （再次输入以便进行校验）
 		有时，普通用户可能需要以root身份执行一些任务，这时您可以使用su -来临时取得root权限。另外一种方法就是使用sudo包，如果配置正确，使用它将会非常安全。
+
 	b、磁盘清理
-
 	移除tarball
-
 	现在您的gentoo已经结束了安装并完成了重启，如果一切顺利，您就可以将下载下来的stage3 tarball和Portage快照文件从硬盘里清除掉了。请记住它们是被下载到您的/目录中的。
-
 	代码 2.1: 移除stage3 tarball
 	# rm /stage3-*.tar.bz2*
 	代码 2.2: 移除Portage快照文件
