@@ -576,6 +576,7 @@
 	# grep -v rootfs /proc/mounts > /etc/mtab
 	*执行grub-install
 	# grub-install --no-floppy /dev/sda
+	# grub-mkconfig -o /boot/grub/grub.cfg
 
 	(如果您还有更多与GRUB相关的问题，请查阅GRUB FAQ或者GRUB手册。
 	从重启系统章节继续。)
@@ -686,3 +687,11 @@
 	当然您别忘了取出可引导光盘，否则重启后引导的将是这张光盘而不是您的新Gentoo系统。
 
 	当重启进入到您新装的Gentoo系统之后，请阅读结束Gentoo的安装来完成剩下的工作。
+
+
+Grub2:
+	3安装grub2：  grub-install /dev/sda（只能跟设备名）
+	4删除原有的grub: rm -r /boot/grub/*
+	5配置grub2: grub-mkconfig
+	            grub-mkconfig -o /boot/grub/grub.cfg
+				
