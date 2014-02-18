@@ -1,0 +1,232 @@
+
+// Linux控制台下看pdf: fbgs fbi Halibut
+# apt-get install fbi (或者apt-get install fbida)
+# fbgs a.pdf
+# fbi a.pdf
+# man fbgs	// 查看fbgs
+# fbgs -c a.pdf // 颜色
+
+// Linux Console 显示JPEG图像
+# apt-get install zgv
+# zgv a.jpg
+
+// 自动下载工具
+# wget
+
+// 制作光盘镜像mkisofs
+// 类似虚拟光驱
+// dd
+Linux 不需要虚拟光驱程序，要看一个iso文件的内容，直接 mount 就行了。比如 mount -o loop mycd.iso /mnt/cdrom。要把光盘做成一个iso文件，用dd就行了，比如如果你的光驱是 /dev/hdb，那么: dd if=/dev/hdb of=mycd.iso 就可以做一个光盘镜像文件叫做 mycd.iso. 
+用 mkisofs 可以制造 iso 虚拟光盘。 
+
+//.程序开发： gcc(g++), make, automake, autoconf, autoheader, ... Linux 下有各种各样方便的开发环境，几乎所有程序语言的编译器，而且大多数都是自由软件。
+
+
+// man 查看命令， info查看命令详细信息
+# man gcc
+# info gcc
+
+// 即时聊天工具 CenterICQ
+http://thekonst.net/centericq/
+  在线交流首选CenterICQ，它有一个文本模式的菜单界面，支持IRC、ICQ2000、MSN、Yahoo!、AIM等协议，能发送大量信息，还能搜索用户、浏览用户资料。它可以发送、接收和查看历史信息，是Linux控制台下很好的聊天工具。 
+
+// 媒体播放器：Mplayer           
+http://www.mplayerhq.hu/
+linux下的万能播放器，支持图形和文本两种模式运行。
+
+// 图片浏览器：imagemagick 和 fbi(牛逼的软件)     
+http://www.imagemagick.org/
+超级牛X的图像处理软件，查看、转换、抓图等几乎所有和图片有关的操作都能搞定。
+
+//音乐播放器：Mp3Blaster         
+http://Mp3Blaster.sourceforge.net/
+对付枯燥的工作，播放音频的工具是不可缺少的。在Linux控制台下我使用Mp3Blaster，这是一个基于文本菜单的程序。它能够播放mp3、wav等多种格式的音频文件，并且能够在播放过程中灵活地改变播放列表，实现交互音乐控制。
+
+// 浏览器:links、lynx、w3m
+# links http://www.baidu.com
+# lynx	http://www.baidu.com
+
+// Pine
+在西雅图的华盛顿大学的一些家伙写出了这个，Pine──一个internet新闻和email程序──一个用来读、发、管理email的工具。如果掌握了键盘操作会很爽。
+
+// Screen
+你肯定有虚拟终端，但是当你需要远程登陆时它就不管用了。所以我们用screen，它就像个全屏的窗口管理器，可以根据你的要求产生很多shell，你可以从一个开始，然后拥有一堆shell。在这个优点之下，它还有从大量shell中分离再重新连接的能力。
+
+// Antiword
+你收到了一个word.doc文件，需要读它？答案是Antiword。这是个免费的linux版MS Word文档阅读器，它可以把 Word 2, 6, 7, 97, 2000, 2002, 2003 这么多版本的word二进制文件转成纯字符文件或者Postscript。
+
+//TPP
+TPP 是一个文本演示程序，是一个ncurses基础的演示工具。基本上可以代替 PowerPoint;-)。你可以用你最喜欢的编辑器以最简单的方式写好演示，然后它们可以在所有被ncurses支持的文本终端上演示出来，从老的TV100到linux framebuffer再到xterm.
+
+//Oleo
+Oleo 是个轻量级的电子制表软件，它可以在几乎任何环境下工作，在字符控制台下生成表格又快又乱（=_=；即将到来的2.0版会支持 MySQL 数据库访问。
+
+//MySQL
+最流行的开源数据库，有许多web和X基础的前端和接口，但你也可以把命令和查询写成脚本然后mysql < script这样使用。当你需要自动数据输入/输出时，产生报告时，集中升级时，它会使你的生活变得简单。你可以用msyqladmin和其他的整合工具来建立用户帐号，数据库，表格和其他东西。
+
+// Halibut
+Halibut 读取像源码为ascii码这样的文档然后转换成其他的格式，比如HTML, PDF, PostScript, Unix man pages, Unix info format, Windows HTML Help (.CHM) 和 Windows WinHelp (old-style 
+
+
+// 前提条件：
+Linux with Framebuffer
+
+字符界面库
+newt
+
+ncurses
+
+中文支持
+zhcon
+
+鼠标支持
+gpm
+
+十六进制查看器
+xxd
+
+字体刷新
+先将字体文件拷到~/.font/下，再在终端中执行：
+mkfontscale
+mkfontdir
+fc-cache -v
+这样，字体库就刷新了。
+
+
+//Debian系统命令
+apt-get install XXX 安装某个软件包，后面接要下载安装的包名
+apt-get remove XXX 卸载某个软件包，后面接要下载安装的包名
+apt-get autoremove 自动卸载不需要的软件包，后面没有参数
+
+aptitude search XXX 在现有的软件库列表中搜索包含关键词XXX的软件包
+
+dpkg -i XXX.deb 如果是自己下载的deb软件包，则可以用终端中用这个命令安装
+
+apt-get -f install 后面不加任何参数，系统自动修复损坏的软件包
+
+在Linux桌面环境中，如何点击一个文本文件实现用终端下的nano来打开这个文件？即用图形方式联接终端下的字符界面程序来打开图标所指示的文件？
+
+zip
+zip -rv9 压缩后的ZIP文件.zip 压缩前的文件名或文件夹名 高压缩率递归压缩指定文件（夹），并在压缩过程中显示压缩信息。
+unzip
+
+tar cvf XXXX.tar.gz XXX/
+tar xvf XXXX.tar.gz XXX/
+
+tar jcvf XXXX.tar.bz2 XXX/
+tar jxvf XXXX.tar.bz2 XXX/
+
+音乐
+
+mp3blaster 可显示歌曲列表
+
+mpg123 + playmp3list 可显示歌曲列表
+
+moc
+
+文件管理
+mc
+
+集成开发
+
+motor
+
+上传下载
+wget
+axel
+mc 用mc来管理ftp很方便
+
+图形图像
+
+fbgrab : 在 framebuffer 下截图，依赖于 libpng。编译时不要用 make，它的 Makefile 调用了一个检查程序，一般都没装,也没什么用。看一下 Makefile，把 gcc ……….. 粘帖下来直接用.
+
+fbv : 看图软件，可以在console 下看 png gif jepg，依赖于 libpng, libungif ,libjepg
+
+iiview : 看图，还可显示缩略图，可以在console 下看 png gif jepg tiff,依赖于 libpng, libungif ,libjepg, libtiff
+
+fbi 系列 : http://linux.bytesex.org/fbida/ 有用的有:
+fbi : 看图软件,可以在console 下看 png gif jepg
+fbgs: 脚本, 用 ghostscript 把 ps , pdf 转成图像, 再用 fbi 看
+exiftran : 在保留 exif 的同时转换 jpeg
+
+mgaview
+
+zgv
+
+视频
+mplayer
+
+进程管理器
+
+top 进程管理
+htop top的升级版本
+
+PDF阅读器
+svp
+
+磁盘状态查看工具
+df
+
+甚至于 minimax 还有游戏，
+
+bastard tetris 一个俄罗斯方块
+
+http://fph.altervista.org/prog/bastet.shtml
+
+enigma 智力游戏，用 SDL 的，图象很好
+
+http://www.nongnu.org/enigma/
+
+cdw ，另一个 ncurse 界面烧录软件
+
+http://sourceforge.net/projects/cdw
+
+核心软件
+
+cdrdao cdrtools dvd+rw-tools
+
+
+// 制作iso镜像的方法：
+把/dev/cdrom目录制作为镜像，名字为/root/rh1.iso
+方法1：dd if=/dev/cdrom of=/root/rh1.iso
+方法2：#cat /dev/cdrom >;/root/1.iso
+方法3：mkisofs -r -o myiso.iso /dev/cdrom
+方法4：cp -r /home/user name.iso
+生成iso镜像以后，就可以用linux下的DVD进行刻录，刻录为DVD光盘了。
+
+
+// 刻录VCD和DVD的方法
+
+现在dvd刻录机已经成为个人电脑的标配，所以大家一定对刻录软件都不陌生。Windows下面最有名的要数Nero了，最新的Nero 9在Amazon上要卖47.95欧元，而且这玩意的安装文件超过1G，运行速度当然也是很慢，简直是脑有恙。Nero也有Linux版，不过同样也不是 免费的。所以不用也罢。
+Linux下面其实有很多好用并且免费的刻录软件，比如KDE下的专业级的k3b，Gnome下的gnomebaker以及nautilus集成的刻录功 能等等。不过今天要讲的是基于命令行的刻录软件，cdrecord以及growisofs。前者用来刻录cd，后者可以刻录dvd。这些软件的优点当然就 是体积超小，速度超快；缺点当然就是没有漂亮的界面，还需要手动输入一些命令。就看你怎么选择了。下面就来说说他们的基本用法。
+首先安装它们：
+Debian:
+# apt-get install cdrtools dvd+rw-tools
+Gentoo:
+# emerge cdrtools dvd+rw-tools
+如果你要制作一个ISO镜像的话，可以用mkisofs：
+$ mkisofs -V LabelName -J -jcharset=utf8 -r -o /home/YourImage.iso /home/your-data-dir
+加上参数J，是为了与Windows更好的兼容；如果要制作启动盘的话，可以加上参数G；参数o后面是输入文件；参数r和文件的权限有关。这样就把"/home/your-data-dir"目录做成了YourImage.iso。
+刻录CD，需要用到的是cdrecord，首先找到你的刻录设备：
+# cdrecord -scanbus
+然后你会看到类似于下面的信息
+scsibus1000:
+1000,0,0 100000) 'TSSTcorp' 'CD/DVDW TS-H552U' 'US04' Removable CD-ROM
+1000,1,0 100001) *
+1000,2,0 100002) *
+1000,3,0 100003) *
+1000,4,0 100004) *
+1000,5,0 100005) *
+1000,6,0 100006) *
+1000,7,0 100007) *
+其中1000,0,0就是我的刻录机，然后：
+# cdrecord -v -dev=1000,0,0 /home/YourImage.iso
+加上参数v可以显示刻录进程。参数dev后面加上刚才找到的刻录设备，最后面则是要刻录的文件，这样就搞定了。
+如果要擦除光盘的话，可以用blank参数：
+# cdrecord blank=type
+其中blank的type可以为all或者fast。选all则擦出整个光盘，耗时较长。fast为快速擦除光盘，仅擦出PMA，TOC和pregap（不懂这些代表什么）
+刻录DVD，需要用到的是growisofs，它其实是mkisofs的一个前端，使用是会自动调用mkisofs，所以刻录前不需要先做好iso文件：
+# growisofs -dvd-compat -Z /dev/dvdrw -V LabelName -r -J -jcharset=utf8 /home/your-data-dir
+有没有发现，它的参数其实和mkisofs基本一致。参数-dvd-compat会结束光盘，使光盘变的不能附加（对dvd-rw无效），这个选项会提供 更多的和dvd-rom驱动器的介质兼容性。参数-Z用来初始刻录会话；该参数可以用-M取代，作用是：追加一些数据到一个已有的dvd-rw上。再次注 意：在 DVD+RW 这种情况下，参数-dvd-compat将不能预防您添加数据。该参数后面接的就是刻录设备，通常是/dev/dvdrw。
+
+
