@@ -1,0 +1,734 @@
+1、启动安装光盘：gentoo dopcmcia
+
+2、创建用户: useradd -m -G users john
+		passwd john
+	切换用户：su - john
+
+3、命令行浏览器：浏览安装文档：links http://www.gentoo.org/doc/zh_cn/handbook/handbook-amd64.xml
+
+4、启动ssh服务: /etc/init.d/sshd start
+
+5、配置网络: ifconfig  iwconfig
+
+6、使用fdisk来磁盘分区: fdisk /dev/sda
+	d：删除分区
+	p: 查看分区
+	n: 创建分区
+
+	创建启动分区:n -> p ->"first:2048" -> "last:+100M"
+	创建交换分区:n -> p -> 2 -> "last:":+512M -> t(交换分区选项) -> 2 -> L -> 82
+	创建根分区:n -> p -> ...
+	保存分区布局：w
+
+7、创建文件系统：
+	稳定的文件系统: ext2 ext3 XFS	其他文件系统: JFS ReiserFS
+#############################
+#	文件系统	命令		#
+#	ext2		mke2fs		#
+#	ext3		mke2fs -j	#
+#	reiserfs	mkreiserfs	#
+#	xfs			mkfs.xfs	#
+#	jfs			mkfs.jfs	#
+#	ext4		mkfs.ext4	#
+#############################
+
+	在分区上应用文件系统：
+	mke2fs /dev/sda1
+	mke2fs -j /dev/sda3
+
+	激活交换分区：
+		mkswap /dev/sda2
+		或者 swapon /dev/sda2
+
+	挂载：
+		mount /dev/sda3 /mnt/gentoo
+		mkdir /mnt/gentoo/boot
+		mount /dev/sda1 /mnt/gentoo/boot
+		注意: 如果你希望/tmp目录在一个独立的分区上，确保在挂载之后修改它的权限：chmod 1777 /mnt/gentoo/tmp。这同样适用于/var/tmp目录。
+		我们还需要在/proc目录上挂载proc文件系统（内核的虚拟接口）。但是，我们首先需要把我们的文件放到分区上。
+
+
+8、安装Gentoo安装文件：
+	a、安装一个Stage Tarball
+		确认日期/时间：date
+		设置日期/时间：date MMDDhhmmYYYY(MM是月，DD是日，hh是时，mm是分， YYYY是年)
+
+	b、默认从网上下载的Stage
+		cd /mnt/gentoo
+		(uname -m：查看需要的stage)
+		links http://www.gentoo.org/main/en/where.xml
+		或者 links http://mirrors.xmu.edu.cn/gentoo/releases/amd64/current-stage3/
+
+		校验一个stage tarball的完整性：
+			md5sum -c stage3-amd64-<release>.tar.bz2.DIGESTS
+
+		解开Stage Tarball:
+			tar -xvjpf stage3-*.tar.bz2
+			(x:解压(Extract)，v:详细信息(Verbose)，j:用bzip2解压缩， p:保留权限(Perserver permissions)，f：表示要解开一个文件，而不是标准输入)
+
+	此刻，stage已经安装好了;
+
+	c、安装Portage
+		cd /mnt/gentoo
+		links http://mirrors.xmu.edu.cn/gentoo/snapshots/
+		tar -xvjf portage-latest.tar.bz2 -C /mnt/gentoo/usr
+
+	d、配置编译选项：
+		（环境变量设置：export;  但是它们不是永久的。为了保持你的设置，Portage为你提供了/etc/make.conf，一个Portage的配置文件。)
+		注意: 所有可能的变量都用注释形式罗列在/mnt/gentoo/usr/share/portage/config/make.conf.example里。要成功地安装Gentoo，你只需要设置下面提到的变量。
+
+		nano -w /mnt/gentoo/etc/make.conf
+		（#开头注释掉该行, 其他行使用VARIABLE="content"的语法来定义变量。）
+
+		CFLAGS和CXXFLAGS:
+			CFLAGS和CXXFLAGS变量分别定义了gcc C和C++编译器的优化标记。
+			第一个设置是-march=或者-mtune=标记，它指定了目标架构的名字。可能的选项 会在make.conf.example里有说明（以注释形式出现）。
+
+			第二个是-O标记（是大写的O，而不是数字零），它是指定gcc的优化级别的标记。可能的级别有s（为优化文件大小），0（0——不优化），1、2乃至3是针对速度的优化标记（每个级别都包含前一级的优化措施，并额外增加了一些）。-O2是推荐的默认设置。-O3已知当全局启用时会引起一些问题，所以我们推荐你还是用-O2。
+
+			另一个普遍使用的优化标记是-pipe（不同编译阶段通信使用管道而不是临时文件）。它对产生的代码没有任何影响，但是会使用更多的内存。在内存不多的系统里，gcc可能会被杀掉。如果是那样的话，就不要用这个标记。
+
+		定义CFLAGS和CXXFLAGS变量:
+			CFLAGS="-march=k8 -02 -pipe" # EM64T应该使用-march=nocona
+			# 两个变量使用相同的设置
+			CXXFLAGS="${CFLAGS}"
+
+		MAKEOPTS:
+			通过使用MAKEOPTS你可以定义在安装软件的时候同时可以产生并行编译的数目。你的CPU数目加一是个不错的选择，但是这个准则并不永远都是完美的。
+			
+			单CPU系统的MAKEOPTS:
+				MAKEOPTS="-j2"
+		
+
+9、安装Gentoo基本系统：(Chroot和配置Portage)
+	a、Chroot:
+		可选：选择镜像站点
+			mirrorselect -i -o >> /mnt/gentoo/etc/make.conf
+		
+		拷贝DNS信息:
+			cp -L /etc/resolv.conf /mnt/gentoo/etc/
+
+		挂载/proc和/dev文件系统：
+			mount -t proc none /mnt/gentoo/proc
+			mount -o bind /dev /mnt/gentoo/dev
+
+		进入新的系统环境：
+			现在所有的分区都已经被初始化，基本环境也已安装完毕，现在是到了该用chroot进入新安装环境的时候了。这意味着我们从当前安装环境（安装光盘或者其他安装介质）切换到你安装的系统里（也就是被初始化的分区）。
+
+			完成chroot有三步。首先我们用chroot把根文件系统从/（安装介质里）切换到/mnt/gentoo（在你的分区里）。然后我们使用env-update来建立新的环境，也就是创建新的环境变量。最后我们用source加载这些变量。
+			
+			Chroot到新环境里：
+				# chroot /mnt/gentoo /bin/bash
+				# env-update
+				>> Regenerating /etc/ld.so.cache...
+				# source /etc/profile
+				# export PS1="(chroot) $PS1"
+
+			祝贺你！你现在已经在你自己的Gentoo Linux环境里了。当然这离安装完成还有段时间，因为我们可以看到安装指南还剩下很多章节呢 :-)
+
+
+		b、配置Portage
+			更新Portage树:
+				# emerge --sync
+				(如果你在使用一个慢速终端比如一些帧缓冲或者是串口的控制台，你可以添加--quiet选项来加速这个过程:)
+				# emerge --sync --quiet
+				( 如果你网络前面的防火墙的配置使得rsync请求被阻挡的话，你可以使用emerge-webrsync下载和安装一个最新的portage快照。如果系统警告你有一个新版本的Portage可用，你可以使用emerge --oneshot portage来更新它。)
+
+			选择正确的Profile:
+			profile是每个Gentoo系统的构造块。它不仅指定了USE、CFLAGS以及其他重要变量的默认值，它还把系统可用的软件版本锁定在某个范围。而这些都是由Gentoo的开发者来维护的。以前，这个profile很少会有用户接触到。然而，有些情况下你可以决定需不需要修改profile。你可以用下面的命令来查看当前使用的profile：
+			验证系统profile:
+			# eselect profile list
+			Available profile symlink targets:
+			[1]   default/linux/amd64/13.0 *
+			[2]   default/linux/amd64/13.0/desktop
+			[3]   default/linux/amd64/13.0/server
+
+			默认的profile会提供给你一个基于2.6版本内核的Linux系统。这是默认推荐的，但是你也可以选择另外一个profile。系统也为某些架构提供了desktop和server的子profile。运行eselect profile list来显示所有可用的profile。看完了你的体系结构可用的profile之后，如果你愿意，你可以换一个profile。
+			切换profile:
+			# eselect profile set 2
+
+			如果你想使用纯64位环境，不用任何的32位程序和库，你应该使用no-multilib profile。
+			切换到non-multilib profile:
+			# eselect profile list
+			Available profile symlink targets:
+			[1]   default/linux/amd64/13.0 *
+			[2]   default/linux/amd64/13.0/desktop
+			[3]   default/linux/amd64/13.0/no-multilib
+			[4]   default/linux/amd64/13.0/server
+			(Choose the no-multilib profile)
+			# eselect profile set 3
+			(Verify the change)
+			# eselect profile list
+			Available profile symlink targets:
+			[1]   default/linux/amd64/13.0
+			[2]   default/linux/amd64/13.0/desktop
+			[3]   default/linux/amd64/13.0/no-multilib *
+			[4]   default/linux/amd64/13.0/server
+			注意: 子profile developer是专为Gentoo Linux开发任务而准备的，而不是用来帮助构建一般性的开发环境的。
+
+
+		配置USE变量：
+			查看可用的USE标记:
+				# less /usr/portage/profiles/use.desc
+			USE设置：
+				# nano -w /etc/make.conf
+					USE="-gtk -gnome qt3 qt4 kde dvd alsa cdr"
+
+		可选： glibc Locales
+			# nano -w /etc/locale.gen
+			指定你的locale(下面的locale同时支持英语(美国)和德语(德国)并带有字符集格式（比如UTF-8）的支持)
+			en_US ISO-8859-1
+			en_US.UTF-8 UTF-8
+			de_DE ISO-8859-1
+			de_DE@euro ISO-8859-15
+
+			运行：# locale-gen
+
+	
+
+10、配置内核:
+	a、时区：
+		可以在/usr/share/zoneinfo中找到您所在的时区，然后把它复制到/etc/localtime。请不要使用/usr/share/zoneinfo/Etc/GMT*下的时区，因为它们“名不副实”。例如，GMT-8事实上是GMT+8区。
+		# ls /usr/share/zoneinfo
+		(假设你要用GMT)
+		# cp /usr/share/zoneinfo/GMT /etc/localtime
+	
+	b、安装源码:
+		选择内核：
+			安装内核源码:
+			# emerge gentoo-sources
+			查看内核源码符号链接:
+			# ls -l /usr/src/linux
+
+	（备选：现在可以用genkernel来自动配置和编译内核，这样会建立一个和安装光盘所用的内核类似的通用的内核)
+	现在为了优化您系统环境的最佳方法：
+	c、默认：手动配置:
+		安装pciutils: # emerge pciutils  用其中的lspci来了解大部分信息
+		您现在可以在chroot的环境中运行lspci。您可以忽略任何pcilib的警告。（类似于pcilib: cannot open/sys/bus/pci/devices）。此外，您也可以在非chroot的环境执行lspci。结果相同。您还可以运行lsmod来查看安装光盘使用了哪些内核模块。
+		
+		开始menuconfig
+		# cd /usr/src/linux
+		# make menuconfig
+
+		必须启用的选项：
+			确保启动您的系统所必需的驱动（比如SCSI控制器...）被编译进内核而不是作为模块加入的。否则您的系统将完全不能启动.
+			然后我们将精确的选择处理器类型。x86_64内核维护者强烈推荐用户打开MCE功能，这样他们能够得到任何硬件问题的通知。在x86_64中，这些错误并不是如同其他架构那样写入dmesg，而是写入/dev/mcelog。这需要安装app-admin/mcelog。如果你想运行32位程序，请一定选中IA32 Emulation。默认情况下，Gentoo将会安装一个multilib系统（可以同时执行32位和64位程序），所以很大可能你会需要这个选项。
+			*选择处理器类型和特性：
+				Processor type and features  --->
+				   [ ] Machine Check Exception
+				   [ ] Intel MCE Features
+				   [ ] AMD MCE Features
+				  Processor family (AMD-Opteron/Athlon64)  --->
+				    ( ) Opteron/Athlon64/Hammer/K8
+				    ( ) Intel P4 / older Netburst based Xeon
+				    ( ) Core 2/newer Xeon
+				    ( ) Generic-x86-64
+				Executable file formats / Emulations  --->
+				   [*] IA32 Emulation
+
+			现在进入File Systems并且选择您使用的文件系统。请不要把它们编译成模块，否则您的Gentoo系统将不能挂载您的分区。同时您也要启用Virtual memory和/proc file system的支持。
+			*选择需要的文件系统：
+			File systems --->
+				Pseudo Filesystems --->
+					[*] /proc file system support
+					[*] Virtual memory file system support (former shm fs)
+
+			#-#-#-#-#  choice  #-#-#-#-#
+			（依照你系统的需要启用下面所列出的一个或是多个选项）
+			  <*> Reiserfs support
+			  <*> Ext3 journalling file system support
+			  <*> JFS filesystem support
+			  <*> Second extended fs support
+			  <*> XFS filesystem support
+
+			如果你在使用PPPoE接入Internet或者您在使用拨号的调制解调器,您需要下面选项:
+			*选择PPPoE驱动:
+			Device Driver --->
+			  Networking Support --->
+			  	<*> PPP (point-to-point protocol) support
+				<*>   PPP support for async serial ports
+				<*>   PPP support for sync tty ports
+			
+			（如果你有多个CPU或者一个多核心(e.g.AMD64 X2)系统，您应该激活"Symmetric multi-processing support":）
+			*启动SMP支持：
+			Processor type and features --->
+			  [*] Symmetric multi-processing support
+			(注意：在多核心系统中，处理器的数目相当于核心的数目)
+
+			（如果你使用USB输入装置（比如键盘或鼠标）那么不要忘记支持他们：）
+			*启用USB接口的输入设备支持:
+			Device Driver --->
+			  [*] HID Devices --->
+			  	<*> USB Human Interface Device (full HID) support
+
+
+		编译与安装：
+			*编译内核:
+			# make && make modules_install
+
+			当内核编译完成后，复制内核镜像到/boot。您可以给内核任意命名，然后记住它。因为在您配置您的系统引导程序的时候您需要用到它。记得用您内核的名字和版本来替代kernel-3.4.9-gentoo。
+			(我的kernel名字是kernel-3.10.25-sunny-gentoo)
+			*安装内核：
+			cp arch/x86_64/boot/bzImage /boot/kernel-3.10.25-sunny-gentoo
+
+	
+	（如果已经执行了c:手动配置，就不用执行d了，直接从e:内核模块一节继续安装）
+	d、备选：使用genkernel
+	现在您的内核源码树已经安装了，是时候用genkernel脚本自动编译您的内核了。genkernel是使用类似安装光盘中的内核配置来配置内核的。这表明当您用genkernel建立内核时，您的系统在启动时候将会如同安装光盘那样识别您所有的硬件。因为genkernel不需要手动配置内核，所以它对于那些不想自己编译特定内核的用户来说是一个理想的解决方案。
+	*安装genkernel:
+	# emerge genkernel
+	*复制安装光盘的配置文件：
+	# zcat /proc/config.gz > /usr/share/genkernel/x86_64/kernel-config
+	现在执行# genkernel all编译您的内核源码。请注意，genkernel编译出的内核支持几乎所有硬件，编译需要一段很长的时间。
+	另外需要注意的是，如果您的启动分区没有使用ext2或者ext3文件系统，您必须使用genkernel --menuconfig all 手动配置您的内核，把您所使用的文件系统编译进内核。（不能编译为模块！）。EVMS2和LVM2的用户很可能也需要加上--evms2和--lvm2参数。
+	*运行genkernel
+	# genkernel all
+	一旦genkernel运行完成，一个包括全部模块和initrd的内核将被建立。在后面配置引导程序时我们将会用到这个内核和initrd。请记下内核和initrd的名字，因为您将在配置引导程序的时候用到他们。initrd将会在启动真正的系统前自动识别硬件（如同安装光盘一样）。
+	*查看内核和initrd的名字
+	# ls /boot/kernel* /boot/initramfs*
+
+	e、内核模块：
+	配置模块：
+	您应该在/etc/modules.autoload.d/kernel-2.6中列出您需要自动加载的模块。如果您愿意，您也可以加上模块的选项。要查看所有可用的模块，运行如下的find命令。不要忘记把“<kernel version>”替换成你刚编译好的内核版本：
+	(我编译的是:kernel version = 3.10.25-gentoo)
+	*查看所有可用的模块：
+	# find /lib/modules/<kernel version>/ -type f -iname '*.o' -or -iname '*.ko' | less
+
+	例如，要自动加载3c59x.ko模块，编辑kernel-2.6文件然后写入模块的名字。
+	(我的kernel-3.10.25)
+	*编辑/etc/modules.autoload.d/kernel-2.6
+	# nano -w /etc/modules.autoload.d/kernel-2.6
+		3c59x
+
+
+8、配置系统：
+	a、文件系统信息：
+	fstab是什么？
+		在Linux系统下，系统所用到的所有分区都必须在/etc/fstab文件中指明。
+	创建/etc/fstab
+		/etc/fstab使用一种特殊语法格式。每行都包含六个字段。这些字段之间由空白键（空格键，tab键，或者两者混合使用）分隔。每个字段都有自己的含意：
+		第一个字段是对分区的描述，也就是设备文件的路径
+		第二个字段是分区挂载点，也就是分区应该挂载到的地方
+		第三个字段给出分区所用的文件系统
+		第四个字段给出的是挂载分区时mount命令所用的挂载选项。由于每个文件系统都有自己的挂载选项，我们建议你阅读mount手册（man mount）以获得所有挂载选项的列表。多个挂载选项之间是用逗号分隔的。
+		第五个字段是给dump使用的，用以决定这个分区是否需要dump。一般情况下，你可以把该字段设为0（零）。
+		第六个字段是给fsck使用的，用以决定系统非正常关机之后文件系统的检查顺序。根文件系统应该为1，而其它的应该为2（如果不需要文件系统自检的话可以设为0）。
+		重要: Gentoo系统默认的/etc/fstab文件不是有效的fstab文件。你必须创建自己的/etc/fstab。	
+	
+		*打开/etc/fstab
+		# nano -w /etc/fstab
+		(让我们看看/boot分区的挂载选项是怎么写的。这仅仅是个例子，如果你没有或者不能创建/boot，请不要复制它。在我们默认的AMD64分区例子中，/boot一般 为/dev/sda1分区，且采用ext2文件系统。 这个分区在引导过程中需要自检，因此我们这样写：)
+		*/etc/fstab中/boot行的一个例子：
+		/dev/sda1	/boot	ext2	defaults	1 2
+		
+		为了提高系统的安全性，一部分用户不希望/boot分区自动挂载。这些用户应该用noauto替换defaults。这就表示用户每次使用该分区时，需要手动挂载。
+		增加符合你分区方案的规则，为你的光驱（当然，如果你有其他分区或者驱动器，也为它们加上）添加挂载规则。
+		现在就参考以下例子创建你的/etc/fstab：
+		代码 1.3: /etc/fstab的一个完整例子
+		/dev/sda1   /boot        ext2    defaults,noatime     1 2
+		/dev/sda2   none         swap    sw                   0 0
+		/dev/sda3   /            ext3    noatime              0 1
+		/dev/cdrom  /mnt/cdrom   auto    noauto,user          0 0
+		auto选项可以使mount猜测文件系统（推荐对于可移动设备采用这个选项，因为它们可能采用很多不同的文件系统），而user选项使得非root用户可以挂载光驱。
+		为了提高性能，大部分用户会添加noatime挂载选项。由于不记录该分区中文件的访问时间（一般来说你并不需要知道它），这个选项能够提高系统速度。
+		请再次确认你的/etc/fstab文件是正确的，保存并退出，继续下面的内容。
+
+
+	b、网络信息：
+	主机名、域名等：
+	用户必须要做的事情之一就是命名自己的机器。尽管这看上去很容易，但是很多用户觉得为他们的Linux机器起一个合适的名字是很难的。为了加快事情的进度，你应该知道你所命名的所有名字都是可以在今后重新修改的。因此，你可以简单命名你的系统为tux，域名为homenetwork。
+	*设定主机名：
+		# nano -w /etc/conf.d/hostname
+		(将HOSTNAME的变量值设定为主机名)
+		HOSTNAME="tux"
+
+	第二，如果你需要一个域名，在/etc/conf.d/net中设定。只有你的ISP或者网络管理员说你需要一个域名，或者你有一个DNS服务器但是没有DHCP服务器的时候，你才需要域名。如果你的网络是DHCP分配IP，那么你不需要理会DNS和域名的问题。\
+	*设定域名：
+	# nano -w /etc/conf.d/net
+	(设定dns_domain的变量值为你的域名)
+	dns_domain_lo="homenetwork"
+	注意: 如果你选择不设定域名，你可以去掉登录界面上的这条信息“This is hostname.(none)”。你只需要修改/etc/issue，把字符串.\O从该文件里删掉即可。\
+	
+	*设定NIS域名：
+	# nano -w /etc/conf.d/net
+	(设定nis_domain的变量值为你的NIS域名)
+	nis_domain_lo="my-nisdomain"
+	注意: 如果想知道更多关于DNS和NIS配置的信息，可以看/etc/conf.d/net.example当中的例子。当然，你也可以安装openresolv来帮助设置DNS、NIS。
+
+	配置你的网络
+		在准备说“嘿，我们已经配置过网络”之前，你应该记得在开始安装Gentoo之初所设置的网络配置是仅仅为了安装而设置的。现在你所要设置的是Gentoo系统的永久网络配置。
+		注意: 更多关于网络配置的详细信息，包括网卡绑定、网桥、802.1Q VLANs和无线网络在内的高级配置会在Gentoo网络配置这一部分介绍.
+		/etc/conf.d/net当中收集了所有的网络信息。尽管这个文件采用直接易懂的语法，如果你还是因为觉得不够直观而完全不知道如何手动进行网络配置的话，请不用担心，我们将一一解释。在/etc/conf.d/net.example中有一个详细注释过的例子，它涵盖了许多种类不同的配置。
+		系统默认使用DHCP。如果使用DHCP的话，你需要安装一个DHCP客户端。这个将在稍后的安装必要的系统工具部分介绍。但是不要忘记安装一个DHCP客户端。
+		如果你需要配置你的网络连接，不管是因为你是需要指定DHCP选项还是你根本不想采用DHCP，请使用你喜欢的编辑器（在这个例子中用的是nano）打开/etc/conf.d/net：
+
+		代码 2.4: 打开/etc/conf.d/net准备编辑
+		# nano -w /etc/conf.d/net
+		你会看到以下的文件:
+
+		代码 2.5: 默认的/etc/conf.d/net
+		# This blank configuration will automatically use DHCP for any net.*
+		# scripts in /etc/init.d.  To create a more complete configuration,
+		# please review /etc/conf.d/net.example and save your configuration
+		# in /etc/conf.d/net (this file :]!).
+		为了输入你自己的IP地址，子网掩码和网关，你需要设置config_eth0和routes_eth0：
+
+		代码 2.6: 手动为eth0设置IP信息
+		config_eth0=( "192.168.0.2 netmask 255.255.255.0 brd 192.168.0.255" )
+		routes_eth0=( "default via 192.168.0.1" )
+		如果你使用DHCP，请定义一下config_eth0：
+
+		代码 2.7: 让eth0自动获得IP地址
+		config_eth0=( "dhcp" )
+		请阅读/etc/conf.d/net.example以得到所有选项的列表。如果你需要设定特殊的DHCP选项，请参考你的DHCP客户端的手册页。
+		如果你有多个网络接口，那么重复之前对于config_eth1、config_eth2等的操作步骤。
+		现在可以保存配置并且退出，继续下面的安装和配置。
+
+
+		在启动时自动启用网络
+		为了在启动时自动激活网络接口，你必须添加这些到default运行级别。
+		代码 2.8: 添加net.eth0到默认的运行级别
+		# rc-update add net.eth0 default
+		如果你有多个网络接口，你需要为他们创建合适的net.eth1、net.eth2等启动脚本。你可以用ln来做这个。
+
+		代码 2.9: 创建额外的启动脚本
+		# cd /etc/init.d
+		# ln -s net.lo net.eth1
+		# rc-update add net.eth1 default
+
+	记下网络信息：
+		现在你需要告诉Linux有关你的网络的信息。这需要在/etc/hosts文件中定义，它将帮助你将那些无法被域名解析器解析的主机名解析成IP地址。你需要定义你自己的系统。如果你不想启用内部DNS系统的话，你也需要定义内部网络上的其它系统。
+		* # nano -w /etc/hosts
+		  (这里定义的是现在的系统):
+		  	127.0.0.1	tux.homenetwork tux localhost
+		  (定义你网络上的其他系统。如果你要用这种纺纱进行定义的华，他们必须有静态IP。)
+		    192.168.0.5	jenny.homenetwork jenny
+			192.168.0.6	benny.homenetwork benny
+			
+		可选：启用PCMCIA
+			*安装pcmciautils
+			# emerge pcmciautils
+
+	c、系统信息
+	设置Root密码：
+		# passwd
+	
+	系统信息:
+	*Gentoo使用/etc/rc.conf来做通用的、系统级的配置。打开/etc/rc.conf并好好读读这个文件中的注解：）
+	# nano -w /etc/rc.conf
+	当你完成对/etc/rc.conf的配置后，保存并退出。
+	正如你所看到的，为了帮助你完成必要变量的配置，这个文件有丰富的注释信息。你可以让你的系统使用unicode并定义你的默认编辑器和你的显示管理器（比如gdm或者kdm）。
+
+	*Gentoo用/etc/conf.d/keymaps来处理键盘设置。编辑它就可以设置你的键盘。
+	# nano -w /etc/conf.d/keymaps
+	KEYMAP这个变量要特别注意。如果你选择了错误的KEYMAP，在你敲击键盘的时候会有奇怪的结果。
+
+	*Gentoo使用/etc/conf.d/clock来设置时钟选项。根据你的需要来编辑它。
+	# nano -w /etc/conf.d/clock
+	如果你机器上的钟不用UTC，你需要在文件钟加上CLOCK="local"。否则，你的时钟就有可能出现偏差。
+
+
+9、安装必要的系统工具:
+	a、系统日志工具
+	Gentoo提供了多种系统日志工具可供选择。这当中有sysklogd（传统的系统日志守护进程），syslog-ng（一个高级系统日志工具），metalog（一个可以灵活配置的系统日志工具）。Portage内或许还有其他的系统日志工具——我们的可用软件包数量是以天为单位在增加的。
+	如果你打算使用sysklogd或者syslog-ng你很可能会随后希望安装logrotate，因为这些系统日志工具并没有提供系统日志文件的滚动功能。
+	要安装你所选择的系统日志工具，你可以用emerge命令安装它，并使用rc-update将它加入default运行级别。以下就是一个安装syslog-ng的例子。当然你要把它换成你的系统日志工具：
+	*安装一个系统日志工具:
+	# emerge syslog-ng
+	# rc-update add syslog-ng default
+
+	b、可选: Cron守护进程
+	接下来你可以选择cron守护进程。尽管这是可选的并且不是系统所必须的，但是最好能够安装一个。那么，什么是cron守护进程呢？cron守护进程执行预定的命令。如果你需要执行一些有规律（例如每天、每周或者每月）的命令，这就会非常有用。
+	Gentoo提供了三个可选的cron守护进程：dcron、fcron和vixie-cron。安装这其中一个的方法和安装一个系统日志工具的方法类似。但是，dcron和fcron需要额外的配置命令，即crontab /etc/crontab。如果你不知道应该选择哪个，那么就用vixie-cron好了。
+	我们对无网络安装只提供了vixie-cron。如果你希望安装其它的cron守护进程，那你只能等待稍后安装了。
+	*安装一个cron守护进程：
+	# emerge vixie-cron
+	# rc-update add vixie-cron default
+	(只有在使用dcron或fcron时需要) # crontab /etc/crontab
+
+	c、可选：文件索引：
+	如果你想索引你的系统文件使得你能够使用locate工具很快定位它们，你需要安装sys-apps/slocate。
+	*安装slocale
+	# emerge slocate
+
+	d、文件系统工具：
+	根据你所使用的文件系统的不同，你需要安装必须的文件系统工具（用于检查文件系统完整性、创建额外的文件系统等）。请注意管理ext2/ext3文件系统的工具（e2fsprogs）已经做为系统的一部分被安装了。
+
+	以下的表格列出了特定文件系统所需要安装的工具。
+	文件系统		工具			安装命令
+	XFS				xfsprogs		emerge xfsprogs
+	ReiserFS		reiserfsprogs	emerge reiserfsprogs
+	JFS	jfsutils	emerge 			jfsutils
+	如果你是EVMS用户，你还需要安装evms：
+	
+	*安装EVMS工具：
+	# USE="-gtk" emerge evms
+	USE="-gtk"参数会避免安装一些相关依赖的基于GTK的程序。如果你希望使用evms的图形工具，你可以重新编译evms。
+
+	e、网络工具：
+	如果你需要Gentoo为你的网卡自动获得IP地址，你需要安装dhcpcd（或者任何其它的DHCP客户端——参见网络模块当中的DHCP客户端列表）。如果你不安装的话，你安装完Gentoo系统后可能会无法连接网络。
+	*可选：安装一个DHCP客户端：
+	# emerge dhcpcd
+
+	*可选：安装PPPoE客户端：
+	# emerge ppp
+
+
+10、配置引导程序：
+	a、作出您的选择：
+	现在，您已经配置并编译好了内核，必需的一些系统配置文件也已经就位，是时候安装一个叫做引导程序的程序来“引燃”您的内核并启动系统了。
+	对于AMD64，Gentoo Linux提供了GRUB和LILO。
+	但在安装bootloader之前，我们要告诉您如何配置framebuffer（前提当然是您想使用它）。在framebuffer的帮助下，您系统的Linux命令行将拥有（有限的）图形特性（例如使用Gentoo提供的漂亮的bootsplash图片）。
+	
+	可选：Framebuffer
+	如果您已经为您的内核加上了framebuffer支持（或者您使用genkernel的默认内核配置），您就可以在bootloader配置文件中加入一个video内核参数来激活它。
+	首先，您需要知道您使用的framebuffer设备。您应该使用uvesafb作为VESA驱动.
+	video语句用来控制framebuffer的显示参数。此语句中需指定欲使用的framebuffer驱动以及你想启用的控制语句。/usr/src/linux/Documentation/fb/uvesafb.txt文件里列出了所有变量。最常用的选项是：
+	控制选项	描述
+	ywrap	 假设显卡支持显存回卷操作（也就是说显存里的数据填充到尽头的时候会接着从起始处继续）
+	mtrr:n	 设置MTRR寄存器. n 可以是：
+	0 - 禁用
+	1 - 不使用cache
+	2 - write-back
+	3 - write-combining
+	4 - write-through
+	模式	 设定分辨率，颜色深度和刷新率。 例如，1024x768-32@85对应的分辨率是1024x768，32位色深和85Hz的刷新率。
+	最后这个参数的内容可能类似这样video=uvesafb:mtrr:3,ywrap,1024x768-32@85。将它记下来；很快您将用到它。
+
+	接下来要继续安装GRUB或LILO。
+
+	b、默认：使用GRUB：
+	了解GRUB的术语:
+	理解GRUB最重要的在于熟悉它如何表述硬盘驱动器和分区。在GRUB中，您的Linux分区/dev/sda1将很可能都被称为(hd0,0)。请注意hd0,0两边的括号——它们是必须加上的。
+	硬盘是从0而不是从“a”开始，分区从0而不是1开始。要明确的是，hd设备只指硬盘，而不包括atapi-ide设备，例如cdrom播放器和刻录机。同样的标识构造方式也适用于SCSI驱动器。（正常情况下，除非BIOS被配置为从SCSI驱动器引导，否则SCSI硬盘的标识数字会比IDE的高。）当您要求BIOS从一个不同的硬盘引导时（例如您的主IDE接口上的从盘），那个硬盘就会被视为hd0。
+	假设您有一个硬盘是/dev/sda，还有两个分别是/dev/sdb和/dev/sdc，那么/dev/hdd7将会被GRUB标识为(hd1,6)。听起来这有些不合常理，确实如此。但正如我们即将见到的，GRUB为您提供了一个tab补全机制，这将大大方便您的操作。即使您拥有许多的硬盘和分区，而且对GRUB的数字标识方案不甚了解，也不用怕。
+	我们已经有了一些感觉了，是时候安装GRUB了。
+
+	安装GRUB:
+	重要: 如果您使用的是一个non-multilib的profile，您不应该emerge grub， 应该emerge grub-static。如果您计划使用一个non-multilib profile并且 你在内核里禁用了IA-32 emulation，那你应该使用lilo.
+	* # emerge grub
+
+	尽管现在已经安装完GRUB，我们仍需要为其写一个配置文件，并将其安置到硬盘的主引导记录中，使它能自动引导您新创建的内核。您可以使用nano（或其他可用的编辑器）来创建配置文件/boot/grub/grub.conf：
+	*创建/boot/grub/grub.conf
+	# nano -w /boot/grub/grub.conf
+
+	现在我们将详细地写一个grub.conf。您在下面的内容中可以找到两个可能的针对本指南中前面章节给出的分区方式例子的grub.conf。我们只详细地评述第一个grub.conf。确保您使用您自己的内核镜像文件名，以及如果有的话，您自己的的initrd镜像文件名。
+	第一个grub.conf是为未使用genkernel来构建内核的用户准备的
+	第二个grub.conf则是为使用genkernel来构建内核的用户准备的
+	注意: Grub根据BIOS来决定设备名。如果你改变了你的BIOS设定，你的设备字母和序号也会改变。比如如果你改变了你的设备的启动顺序，你就需要改变你的grub配置。
+	注意: 如果您使用JFS来作为root文件系统，您就必须在kernel那行添加上“ro”参数，因为JFS文件系统在其允许被加载为可读写状态前需要使用这个参数来重放它的日志。
+	*不使用genkernel的用户的grub.conf
+	# 默认选择哪个列表来引导。0表示第一个，1表示第二个，以此类推
+	default 0
+	# 引导默认列表前等待多少秒
+	timeout 30
+	# 使用漂亮、"臃肿"的spalsh图像来增加一点趣味：
+	# 如果您没有安装显卡，请将这行注释
+	splashimage=(hd0,0)/boot/grub/splash.xmp.gz
+
+	title Gentoo Linux 3.10.25
+	# 内核镜像（或者操作系统）所在分区
+	root (hd0,0)
+	kernel /boot/kernel-3.10.25-sunny-gentoo root=/dev/sda3
+
+	title Gentoo Linux 3.10.25 (rescue)
+	# 内核镜像（或操作系统）所在分区
+	root (hd0,0)
+	kernel /boot/kernel-3.10.25-sunny-gentoo root=/dev/sda3 init=/bin/bb
+
+	# 接下来的四行只有您在与Windows系统进行双系统启动的情况下才需要。
+	# 本例中,Windows系统位于/dev/sda6
+	title Windows XP
+	rootnoverify (hd0,5)
+	makeactive
+	chainloder +1
+(到此，配置完毕)
+
+	*使用genkernel的用户的grub.conf
+	default 0
+	timeout 30
+	splashimage=(hd0,0)/boot/grub/splash.xpm.gz
+
+	title Gentoo Linux 3.10.25
+	root (hd0,0)
+	kernel /boot/kernel-3.10.25-sunny-gentoo root=/dev/ram0 init=/linuxrc ramdisk=8192 real_root=/dev/sda3
+	initrd /boot/initramfs-genkernel-amd64-3.10.25-gentoo
+
+	# 只有在双系统启动的情况下才需要
+	title Windows XP
+	rootnoverify (hd0,5)
+	makeactive
+	chainloader +1
+
+	如果您使用与此不同的分区方案和／或内核镜像，请相应地进行调整。无论怎样，请确保紧跟在GRUB设备（例如(hd0,0)）后面的是相对于挂载点的路径，而不是根目录。换句话说，(hd0,0)/grub/splash.xpm.gz的实际目标是/boot/grub/splash.xpm.gz，因为(hd0,0)就是/boot分区。
+	另外，如果您选择使用不同的分区方案并且没有将/boot置于一个独立的分区，上述示例代码中/boot前缀实际上是必需的。如果您使用我们所建议的分区方案，则不一定非要使用/boot前缀，但即便加了它，由于/boot分区里有一个boot符号链接指向当前目录，也可以正常工作。简单的说，无论您是否定义了一个独立的/boot分区，上述例子应该都能正常工作。
+	如果您需要传递任何其他的参数给内核，简单地在内核命令后面加上它们就可以了。我们已经传递了一个参数（root=/dev/sda3或real_root=/dev/sda3），但您也可以加上其他的，例如我们前面讨论过的为framebuffer加上video参数。
+	如果你的引导程序配置文件包含real_root参数，请使用real_rootflags参数来设置根文件系统的挂载选项。
+	如果您使用的是2.6.7或更高版本的内核，并且您使用硬盘跳线来使主板的BIOS能正确处理大硬盘，那么在启动内核时您还需要附加sda=stroke的参数。请把sda替换成需要这个参数的设备。
+	genkernel用户需知道他们的内核使用与安装光盘相同的启动参数。例如，若您有SCSI设备时，您就需要添加doscsi这个内核启动参数。
+	现在请保存grub.conf文件并退出。您仍需要将GRUB安装到MBR（主引导记录），以便重启时GRUB能自动执行。
+	GRUB的开发者推荐使用grub-install。尽管如此，如果在某些情况下grub-install无法正常工作，您依然可以选择进行手动安装GRUB。
+	从默认：使用grub-install安装GRUB或者备选：使用手动指令安装GRUB继续。
+
+	默认：使用grub-install安装GRUB
+	为了安装GRUB，您将需要执行grub-install命令。尽管如此，当我们处于chroot的环境时，grub-install并不能正常的工作。我们还需要创建一个/etc/mtab，在里面列出所有已加载的文件系统。幸运的是，有一个简单的方法来完成这个任务——将/proc/mounts拷贝成/etc/mtab，如果您没有创建一个独立的boot分区，请排除rootfs行。下面的命令在两种情况下都可以正常工作：
+	*创建/etc/mtab
+	# grep -v rootfs /proc/mounts > /etc/mtab
+	*执行grub-install
+	# grub-install --no-floppy /dev/sda
+	# grub-mkconfig -o /boot/grub/grub.cfg
+
+	(如果您还有更多与GRUB相关的问题，请查阅GRUB FAQ或者GRUB手册。
+	从重启系统章节继续。)
+
+	
+	备选：手动指令安装GRUB
+	您可以通过输入grub来开始配置GRUB。呈现在您面前的将是grub命令提示符grub>。现在，您需要输入正确的命令来将GRUB引导记录安装到您的硬盘中。
+	*启动GRUB shell
+	# grub --no-floppy
+	注意: 如果您的系统中没有任何的软盘驱动器，在上面的命令后面加上--no-floppy选项，防止grub检测（实际上不存在的）软驱。
+
+	在此示例配置中，我们想让我们安装的GRUB可以从boot分区/dev/sda1读取信息，同时我们将GRUB引导记录安装到硬盘的MBR（主引导记录）中，这样当打开电脑时您首先可以看到的就是GRUB引导的界面。当然，如果您安装时没有按照示例配置来做，请相应的更改一些命令。
+	GRUB的tab自动补全机制可以在GRUB中使用。例如，如果您输入“root (”之后按下TAB键，一个设备列表就会呈现在您面前（例如hd0）。如果您输入“root (hd0,”之后按下TAB键，系统又将返回一个已有的分区列表，以便您选择（例如hd0,0）。
+	利用tab补全，设置GRUB将不会那么困难。现在我们继续设置GRUB，如何？ :-)
+	*将GRUB安装到硬盘主引导记录中：
+	grub> root (hd0,0)	(指定您的/boot目录所在分区)
+	grub> setup (hd0)	(将GRUB安装到硬盘主引导记录)
+	grub> quit			(退出GRUB shell)
+
+	如果您想将GRUB安装到某一个分区而不是硬盘主引导记录中，您需要调整setup命令，使其指向正确的分区。例如，如果您要将GRUB安装到/dev/sda3，对应的命令应该是setup (hd0,2)。但是只有少数用户需要这么做。
+	如果您还有更多与GRUB相关的问题，请查阅GRUB FAQ或者GRUB手册。
+	从重启系统章节继续。
+
+
+		10.c. 备选：使用LILO
+
+		安装LILO
+
+		LILO，是LInuxLoader的简称，它是一个可靠且确实能担当重任的Linux的bootloader。尽管如此，它缺少一些GRUB具有的特性（这正是目前GRUB之所以流行的原因）。LILO仍被人们使用的原因在于：在一些系统中，GRUB不能工作而LILO可以。当然，也有一些用户是因为熟悉它而仍坚持使用它。无论是什么原因，Gentoo对两个bootloader都提供了支持，看到这里显然您已经选择了使用LILO。
+
+		安装LILO是件轻而易举的事；只需emerge就好了。
+
+		代码 3.1: 安装LILO
+		# emerge lilo
+		配置LILO
+
+		要配置LILO，您必须创建/etc/lilo.conf文件。打开一个您喜欢的编辑器（为保持一致性，在本手册中我们使用nano）然后创建它。
+
+		代码 3.2: 创建/etc/lilo.conf
+		# nano -w /etc/lilo.conf
+		前面章节中我们已经提醒您记下您所创建的内核镜像文件名。在接下来的示例lilo.conf中，我们使用的是示例的分区方案。这里有两个独立的部分：
+
+		一个是为那些不使用genkernel建立内核的用户准备的
+		另一个是为那些使用genkernel建立内核的用户准备的
+		请确保您使用的是您自己的内核镜像的文件名，以及（如果用到的话）您自己的initrd镜像的文件名。
+
+		注意: 如果您使用JFS来作为root文件系统，您就必须在每个引导项目的后面添加上形如append="ro"的一行内容，因为JFS文件系统在其允许被加载为可读写状态前需要使用这个参数来重放它的日志。
+		代码 3.3: 示例/etc/lilo.conf
+		boot=/dev/sda             # 将LILO安装到硬盘主引导扇区
+		prompt                    # 给用户选择其他引导项目的机会
+		timeout=50                # 引导默认引导项目前等待5秒钟
+		default=gentoo            # 当等待结束后引导“gentoo”项目
+
+		# 给不使用genkernel的用户的
+		image=/boot/kernel-3.4.9-gentoo
+		  label=gentoo            # 我们为此引导项目起的名字
+		  read-only               # 以只读root状态开始。此处不要改变！
+		  root=/dev/sda3          # 定位root文件系统
+
+		image=/boot/kernel-3.4.9-gentoo
+		  label=gentoo.rescue     # 我们为此引导项目起的名字
+		  read-only               # 以只读root状态开始。此处不要改变！
+		  root=/dev/sda3          # 定位root文件系统
+		  append="init=/bin/bb"   # 启动Gentoo的静态急救shell
+
+		# 给使用genkernel的用户的
+		image=/boot/kernel-genkernel-amd64-3.4.9-gentoo
+		  label=gentoo
+		  read-only
+		  root=/dev/ram0
+		  append="init=/linuxrc ramdisk=8192 real_root=/dev/sda3"
+		  initrd=/boot/initramfs-genkernel-amd64-3.4.9-gentoo
+
+		# 下边的两行只有在您与Windows系统进行双启动的情况下才需要
+		# 在本例中，Windows位于/dev/sda6
+		other=/dev/sda6
+		  label=windows
+		注意: 如果您使用了与此不同的分区方案和/或者内核镜像，请进行相应的调整。
+		如果您需要为内核传递任何额外的参数，可以在相应的启动项目里添加一个append语句。例如，我们加上video参数来启用framebuffer：
+
+		代码 3.4: 使用append来添加内核参数
+		image=/boot/kernel-3.4.9-gentoo
+		  label=gentoo
+		  read-only
+		  root=/dev/sda3
+		  append="video=uvesafb:mtrr,ywrap,1024x768-32@85"
+		如果您使用的是2.6.7或更高版本的内核，并且您使用硬盘跳线来使主板的BIOS能正确处理大硬盘，那么在启动内核时您还需要附加sda=stroke的参数。请把sda替换成需要这个参数的设备。
+
+		genkernel用户需知道他们的内核使用与安装光盘相同的启动参数。例如，若您有SCSI设备时，您需添加doscsi这个内核启动参数。
+
+		现在让我们保存文件并退出。要最终完成，您还得运行/sbin/lilo，这样LILO才能将/etc/lilo.conf应用到您的系统（也就是将其自身安装到硬盘中）。请记住每当你安装了一个新内核或改变了菜单的任何内容时，您也需要再运行一次/sbin/lilo。
+
+		代码 3.5: 完成LILO的安装
+		# /sbin/lilo
+		如果您还有更多与LILO有关的问题，请参阅它的wikipedia页面。
+
+		现在请继续阅读重启系统。
+
+	10.d. 重启系统
+
+	退出chroot的环境，卸载所有已挂载的分区。然后输入您已经等待多时的那个魔术般的命令：reboot。
+
+	代码 4.1: 卸载所有分区和重启
+	# exit
+	cdimage ~# cd
+	cdimage ~# umount /mnt/gentoo/boot /mnt/gentoo/dev /mnt/gentoo/proc /mnt/gentoo
+	cdimage ~# reboot
+	当然您别忘了取出可引导光盘，否则重启后引导的将是这张光盘而不是您的新Gentoo系统。
+
+	当重启进入到您新装的Gentoo系统之后，请阅读结束Gentoo的安装来完成剩下的工作。
+
+
+Grub2:
+	3安装grub2：  grub-install /dev/sda（只能跟设备名）
+	4删除原有的grub: rm -r /boot/grub/*
+	5配置grub2: grub-mkconfig
+	            grub-mkconfig -o /boot/grub/grub.cfg
+				
+
+
+11、结束Gentoo的安装
+	a、用户管理
+	为日常使用添加一个用户
+		在Unix/Linux系统中，用root进行工作是一件危险的事情，应该尽量避免。因此我们强烈推荐您为日常使用添加一个普通用户。
+		用户所属的组定义了其可以执行的活动。下表中列出了许多您可能希望使用的重要组：
+
+		组	描述
+		audio	允许使用声音设备
+		cdrom	允许直接使用光驱
+		floppy	允许直接使用软驱
+		games	允许运行游戏
+		portage	允许以普通用户的身份执行emerge --pretend
+		usb	允许使用USB设备
+		plugdev	 允许挂载和使用可拔插设备，例如摄像头和U盘
+		video	 允许使用视频采集设备和硬件加速
+		wheel	允许使用su
+		例如，要创建一个名为john的用户，并使其隶属于wheel组，users组和audio组，请先用root用户登录（只有root有权限创建用户），然后执行useradd命令：
+
+		代码 1.1: 添加一个日常使用的用户
+		Login: root
+		Password: (您的root密码)
+
+		# useradd -m -G users,wheel,audio -s /bin/bash john
+		# passwd john
+		Password: （输入john用户使用的密码）
+		Re-enter password: （再次输入以便进行校验）
+		有时，普通用户可能需要以root身份执行一些任务，这时您可以使用su -来临时取得root权限。另外一种方法就是使用sudo包，如果配置正确，使用它将会非常安全。
+
+	b、磁盘清理
+	移除tarball
+	现在您的gentoo已经结束了安装并完成了重启，如果一切顺利，您就可以将下载下来的stage3 tarball和Portage快照文件从硬盘里清除掉了。请记住它们是被下载到您的/目录中的。
+	代码 2.1: 移除stage3 tarball
+	# rm /stage3-*.tar.bz2*
+	代码 2.2: 移除Portage快照文件
+	# rm /portage-latest.tar.bz2*
