@@ -1,4 +1,5 @@
 
+
 // Linux控制台下看pdf: fbgs fbi Halibut
 # apt-get install fbi (或者apt-get install fbida)
 # fbgs a.pdf
