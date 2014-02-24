@@ -1,0 +1,119 @@
+# 参考（64-bit）： http://www.oschina.net/question/12_49423
+
+# 参考（32-bit）：http://www.cnblogs.com/sn-dnv-aps/archive/2012/06/08/2542205.html
+
+# 在Ubuntu-x64bit 下编译GCC 4.8.2
+
+# 安装必要的软件包
+sudo apt-get update
+sudo apt-get install gcc
+sudo apt-get install g++
+sudo apt-get install gawk
+sudo apt-get instll m4
+sudo apt-get install gcc-multilib
+sudo apt-get install binutils
+sudo apt-get install lzip
+
+# 新建GCC目录
+cd ~
+mkdir GCC && cd GCC
+
+# 下载GCC-4.8.2源码: http://gcc.gnu.org/mirrors.html
+# 下载三个必须的库gmp、mpfr、mpc;根据依赖关系：mpfr依赖于gmp, mpc依赖于gmp和mpfr
+# 先安装gmp,再安装mpfr，然后安装mpc,最后安装gcc
+# gmp : https://gmplib.org/
+# mpfr : http://www.mpfr.org/mpfr-current/#download
+# mpc : http://www.multiprecision.org/index.php?prog=mpc&page=download
+# 
+# gmp
+wget https://gmplib.org/download/gmp/gmp-5.1.3.tar.lz
+# mpfr
+wget http://www.mpfr.org/mpfr-current/mpfr-3.1.2.tar.xz
+# mpc
+wget ftp://ftp.gnu.org/gnu/mpc/mpc-1.0.2.tar.gz
+# gcc-4.8.2
+wget http://mirrors.webhostinggeeks.com/gcc/releases/gcc-4.8.2/gcc-4.8.2.tar.bz2
+
+# 解压 gmp
+lzip -d gmp-5.1.3.tar.lz
+tar -xvf gmp-5.1.3.tar -C gmp
+# 解压mpfr
+tar -Jxvf mpfr-3.1.2.tar.xz -C mpfr
+# 解压mpc
+tar -zxvf mpc-1.0.2.tar.gz -C mpc
+# 解压GCC
+tar -jxvf gcc-4.8.2.tar.bz2 -C gcc
+
+###############
+# 开始编译    #
+###############
+
+# 编译gmp库,安装到/usr/gcc_4_8目录，以x86_64-linux-gnu内核
+cd gmp
+mkdir build && cd build
+../configure --prefix=/usr/gcc_4_8 --build=x86_64-linux-gnu
+make
+sudo make install
+
+# 编译mpfr库,安装到/usr/gcc_4_8目录，以x86_64-linux-gnu内核，以gmp库
+cd ..
+cd ..
+cd mpfr
+mkdir build && cd build
+../configure --build=x86_64-linux-gnu --prefix=/usr/gcc_4_8 --with-gmp=/usr/gcc_4_8
+make
+sudo make install
+
+# 编译mpc库，依赖gmp、mpfr，内核。。。
+cd ..
+cd ..
+cd mpc
+mkdir build && cd build
+../configure --build=x86_64-linux-gnu --prefix=/usr/gcc_4_8 --with-gmp=/usr/gcc_4_8 --with-mpfr=/usr/gcc_4_8
+make
+sudo make install
+
+#####################
+#  准备编译GCC源码  #
+#####################
+
+# 接下来开始编译C/C++和Fortran编译器
+cd ..
+cd ..
+mkdir build && cd build
+export LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/
+export C_INCLUDE_PATH=/usr/include/x86_64-linux-gnu
+export CPLUS_INCLUDE_PATH=/usr/include/x86_64-linux-gnu
+../gcc/configure --build=x86_64-linux-gnu --prefix=/usr/gcc_4_8 --with-gmp=/usr/gcc_4_8 --with-mpfr=/usr/gcc_4_8 --with-mpc=/usr/gcc_4_8 --enable-checking=release --enable-languages=c,c++,fortran --disable-multilib --program-suffix=-4.8
+make
+sudo ln -s /usr/lib/x86_64-linux-gnu /usr/lib64
+sudo make install
+
+###########################################
+#  至此，Gcc已经安装完成，下面配置系统路径#
+###########################################
+
+# 下面命令可将gcc 4.8添加到系统路径，或者直接编辑home目录下.bashrc文件，在最后添加下面一行
+export PATH=/usr/gcc_4_8/bin:$PATH
+
+# 调用编译器的简单方法
+g++-4.8 test.cpp -o test
+
+# 可将源码删除
+# rm -rf gmp mpfr mpc gcc
+
+# 其他资料:
+在配置之前先讲解一下，要用到的配置是什么意思：
+--target=   生成的目标系统   #在编译主机用的不需要配置这个
+--build=    编译的机器的类型  #这个可以说是必须要修改的
+--host=    主机的类型           #这个参数不需要用到
+--prefix=   安装的目录           #这个一定要配置
+--enable-languages=   这个是配置生成的程序，支持什么语言的编译器   #这个要配置，防止生成的文件成多。参数过多造成编译不通过
+--disable-werror         这个是关闭提醒   #不一定需要。
+--enable-ld=[yes,no]    这个是联合binutils编译的时候用到的。 #如果只编译这个GCC.这个可以省略
+--enable-gold=[yes,no]    这个是联合binutils编译的时候用到的。 #只编译GCC 不需要用到这个。
+--program-suffix=       这个是程序的后序          #为了区别与系统自带的gcc建议加上这个
+--program-transform-name=   这个是用来生成个性化的 gcc 命名规则。#如果使用了这个，可以不用上面的--program-suffix 这个选项
+--disable-multilib        关闭使用跨平台的库          #建设使用这个选项
+
+
