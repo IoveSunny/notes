@@ -1,5 +1,4 @@
 # 参考（64-bit）： http://www.oschina.net/question/12_49423
-
 # 参考（32-bit）：http://www.cnblogs.com/sn-dnv-aps/archive/2012/06/08/2542205.html
 
 # 在Ubuntu-x64bit 下编译GCC 4.8.2
