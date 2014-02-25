@@ -1,0 +1,357 @@
+# 官方手册：https://wiki.archlinux.org/index.php/Main_Page_(%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87)
+# https://wiki.archlinux.org
+
+1、修改语言：
+	键盘布局默认为us# loadkeys layout可修改
+	系统默认语言设置：
+		# nano /etc/locale.gen
+			en_US.UTF-8 UTF-8
+			#德语
+			de_DE.UTF-8 UTF-8 
+			#中文
+			zh_CN.UTF-8 UTF-8
+		# locale-gen
+		# export LANG=de_DE.UTF-8
+
+2、建立网络连接：
+	# ip link  //查看接口名字
+	# ping -c 3 www.baidu.com //可检查网络连接是否成功
+
+	有线连接:
+		如果使用静态ip配置连接到有线网络，
+			首先禁用自动启动的dhcpcd服务:
+			# systemctl stop dhcpcd
+			# ip link //查看有线连接的名字
+			（如果你不确定的话，有线连接一般以"e"开头，一般不会以"lo"或"w"开头。）
+				你也应该了解以下信息:
+				静态IP地址,
+				子网掩码,
+				网关IP地址,
+				域名服务器(DNS)IP地址,
+				域名 (如果是本地局域网，可以任意取名).
+
+			激活接口(这里有线接口是:enp2s0f0):
+			# ip link set enp2s0f0 up
+			
+			添加地址:
+			# ip addr add <ip 地址>/<掩码位数> dev <接口名>
+			# ip addr add 192.168.1.2/24 dev enp2s0f0
+			（man ip)
+
+			添加网关:(ip地址替换为实际的网关地址, virtualbox虚拟机ip网关一般为10.0.2.2)
+			# ip route add default via <ip 地址>
+			# ip route add default via 192.168.1.1
+			
+			替换DNS服务器ip地址和本地域名:
+			# nano /etc/resolv.conf
+				nameserver 8.8.8.8
+				nameserver 114.114.114.114
+				nameserver 127.0.0.1
+				search lan
+
+
+3、准备存储设备（分区）
+	分区工具：fdisk, cfdisk, gdisk, cgdisk, parted
+	提示: 用lsblk -f或lsblk -o NAME,FSTYPE,SIZE,LABEL命令显示连接到系统的硬盘和分区，这样可以确定要使用的分区。
+
+	通过cgdisk 创建 GPT 分区：
+	
+	用 fdisk 建立 MBR 分区：
+		# fdisk /dev/sda
+
+		然后建立第一个分区:
+		Command (m for help): 输入 n 并按下 Enter
+		Partition type: Select (default p): 按下 Enter
+		Partition number (1-4, default 1): 按下 Enter
+		First sector (2048-209715199, default 2048): 按下 Enter
+		Last sector, +sectors or +size{K,M,G} (2048-209715199....., default 209715199): 输入 +15G 并按下 Enter
+		然后建立第二个分区:
+		Command (m for help): 输入 n 并按下 Enter
+		Partition type: Select (default p): 按下 Enter
+		Partition number (1-4, default 2): 按下 Enter
+		First sector (31459328-209715199, default 31459328): 按下 Enter
+		Last sector, +sectors or +size{K,M,G} (31459328-209715199....., default 209715199): 按下 Enter
+		现在预览下新的分区表:
+		
+		Command (m for help): 输入 p 并按下 Enter
+		Disk /dev/sda: 107.4 GB, 107374182400 bytes, 209715200 sectors
+		Units = sectors of 1 * 512 = 512 bytes
+		Sector size (logical/physical): 512 bytes / 512 bytes
+		I/O size (minimum/optimal): 512 bytes / 512 bytes
+		Disk identifier: 0x5698d902
+
+		   Device Boot     Start         End     Blocks   Id  System
+		   /dev/sda1           2048    31459327   15728640   83   Linux
+		   /dev/sda2       31459328   209715199   89127936   83   Linux
+		   
+		   然后向磁盘写入这些改动:
+		   Command (m for help): 输入 w 并按下 Enter
+		   如果一切顺利无错误的话 fdisk 程序将会显示以下信息:
+		   The partition table has been altered!
+
+		   Calling ioctl() to re-read partition table.
+		   Syncing disks. 
+		   如果因 fdisk 遇到错误导致以上操作无法完成, 你能使用 q 命令来退出。
+
+	创建文件系统：
+		# mkfs.ext4 /dev/sda1
+		# mkfs.ext4 /dev/sda2
+
+		如果创建了swap分区，格式化和启用：
+		# mkswap /dev/sdaX
+		# swapon /dev/sdaX
+
+		UEFI系统需要格式化 ESP分区（假设是/dev/sda1）:
+		# mkfs.vfat -F32 /dev/sda1
+
+	挂载分区：
+		检查磁盘的标识符和布局:
+		# lsblk -f
+		注意: 不要在同一个目录挂载多个分区，而且按照顺序挂载很重要
+
+		先挂载根分区到/mnt:
+		# mount /dev/sda1 /mnt
+		然后挂载/home分区和其余单独分区(/boot, /var 等)
+		然后在/mnt 中创建home目录并挂载分区:
+		# mkdir /mnt/home
+		# mount /dev/sda2 /mnt/home
+
+		(
+			如果是 UEFI 主板，挂载UEFI分区：
+				# mkdir -p /mnt/boot
+				# mount /dev/sdaX /mnt/boot
+
+	
+	选择安装镜像：
+		编辑/etc/pacman.d/mirrorlist, 将最想用的放到最前面.mirrorlist 文件也会被pacstrap复制到新系统，所以最好现在就设置好。
+		# nano /etc/pacman.d/mirrorlist
+		  Server = http://mirrors.ustc.edu.cn/archlinux/$repo/os/$arch
+		  Server = http://mirrors.hustunique.com/archlinux/$repo/os/$arch
+		  ...(自己选)
+
+	安装基本系统：
+		使用 pacstrap 脚本安装基本系统：
+		# pacstrap /mnt base base-devel
+		如果 pacman 报告安装时遇到错误的签名(error: failed to commit transaction (invalid or corrupted package))，请运行如下命令：
+		# pacman-key --init && pacman-key --populate archlinux
+
+
+	生成 fstab:
+		如果想使用UUID，使用 -U 选项;如果想用标签，用 -L 选项
+		# genfstab -U -p /mnt >> /mnt/etc/fstab
+		# nano /mnt/etc/fstab
+		Note: 后面如果出现问题，请不要再次运行genfstab，如果需要，手动编辑/etc/fstab
+
+		分区表配置：https://wiki.archlinux.org/index.php/Fstab#Field_definitions
+		/etc/fstab
+		# <file system>        <dir>         <type>    <options>             <dump> <pass>
+		/dev/sda1              /             ext4      defaults,noatime      0      1
+		/dev/sda2              none          swap      defaults              0      0
+		/dev/sda3              /home         ext4      defaults,noatime      0      2
+		（<pass>字段：1表示/分区，0表示swap分区，2表示其他分区）
+
+
+	
+	Chroot 到新系统:
+		# arch-chroot /mnt
+		进入bash shell
+		# arch-chroot /mnt /bin/bash
+
+	
+4、配置系统：
+	Locale:
+		中文系统：
+		# nano locale.gen
+			en_US.UTF-8 UTF-8
+			zh_CN.UTF-8 UTF-8
+		# locale-gen
+
+		locale.conf默认不存在，一般设置LANG想就行,它是其他设置的默认值
+		# nano /etc/locale.conf
+			LANG=en_US.UTF-8
+
+	终端字体和键盘映射：
+		编辑 # nano /etc/vconsole.conf
+			KEYMAP : 可用的键盘映射位于/usr/share/kbd/keymaps. 注意此设置仅对 TTY 起作用，不改变图形窗口或X的设置。
+			FONT : 可用字体位于 /usr/share/kbd/consolefonts/，一般可用留空。
+			FONT_MAP : 可选设置，定义要加载的映射，请参考 man setfont。可以删除或者留空。
+		
+		Example:
+			KEYMAP=us
+			FONT=
+
+	时区：
+		# ln -s /usr/share/zoneifo/Asia/Shanghai /etc/localtime
+	
+	硬件时间：
+		# hwlock --systohc --utc
+
+	Hostname:
+		# echo we > /etc/hostname
+
+
+	配置网络：
+		动态 IP：
+			使用 dhcpcd:
+				如果你只使用一个单一的固定有线网络连接,你并不需要网络管理服务的话,你可以简单的使用 dhcpcd 服务. 在这里, interface_name 是你的网卡名称:
+				# systemctl enable dhcpcd.service
+				如果不行，试试：
+				# systemctl enable dhcpcd@interface_name.service
+
+			使用 netctl:
+				复制一个简单的配置样本 /etc/netctl/examples 到 /etc/netctl/:
+				# cd /etc/netctl
+				# cp examples/ethernet-dhcp my-network
+				根据你的需要修改配置文件 (修改 Interface):
+				# nano my-network
+				启用这个 my-network 配置:
+				# netctl enable my-network
+
+			使用 netctl-ifplugd:
+				警告: 不要将这种方式与 netctl enable <profile> 混用。
+				或者,你也可以使用 netctl 的 netctl-ifplugd 插件,方便的连接到网络:
+				安装 ifplugd, 这是被 netctl-ifplugd 所依赖的:
+				# pacman -S ifplugd
+				然后启用它.在这里, interface_name 是你的网卡名称:
+				# systemctl enable netctl-ifplugd@<interface>.service
+				Tip: Netctl 也提供了 netctl-auto，可以与 netctl-ifplugd 一起管理有线配置。
+
+
+		静态 IP:
+			使用 netctl:
+				复制一个简单的配置样本 /etc/netctl/examples 到 /etc/netctl/:
+				# cd /etc/netctl
+				# cp examples/ethernet-static my-network
+				根据你的需要修改配置文件 (修改 Interface, Address, Gateway 和 DNS):
+				# nano my-network
+				Address 中使用/24这样CIDR 标记方式设置掩码为255.255.255.0。
+				然后启用刚刚创建的配置文件:
+				# netctl enable my-network
+
+		无线网络:
+			https://wiki.archlinux.org/index.php/Beginners%27_Guide_(%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87) 中下
+
+		模拟信号猫，PPoE DSL：
+			https://wiki.archlinux.org/index.php/Direct_Modem_Connection
+
+
+5、创建初始 ramdisk 环境：
+	# nano /etc/mkinitcpio.conf
+		HOOKS="base udev autodetect block filesystems keymap usbinput fsck"
+	# VirtualBox 虚拟机
+		HOOKS="base udev autodetect block filesystems keymap usbinput fsck vboxguest"
+	# mkdinitcpio -p linux
+
+
+6、设置 Root 密码：
+	# passwd
+
+7、安装配置启动加载器：
+	Syslinux :
+		安装 syslinux，使用 syslinux-install_update 命令自动安装文件 (-i), 设置分区为活动分区 (-a), 安装MBR (-m):
+		# pacman -S syslinux
+		# syslinux-install_update -iam
+
+		编辑syslinux.cfg,将/指向正确根分区，否则Arch启动不了.将"sda3"修改为实际分区。同样修改LABEL archfallback:
+		# nano /boot/syslinux/syslinux.cfg
+		 ...
+		 LABEL arch
+		  ...
+		  APPEND root=/dev/sda1 rw
+		  ...
+		 ...
+		 LABEL archfallback:
+		  ...
+		  APPEND root=/dev/sda1 rw
+		  ...
+
+	
+	Grub引导：
+		# pacman -S grub
+		# grub-install --target=i386-pc --recheck --debug /dev/sda
+		
+		自动生成 grub.cfg
+		# grub-mkconfig -o /boot/grub/grub.cfg
+
+
+7、卸载分区并重启系统：
+	# exit
+	# umount -R /mnt
+	# reboot
+
+8、用户管理：https://wiki.archlinux.org/index.php/Users_and_Groups_(%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87)#User_management
+	# who
+	创建sunny用户
+	# useradd -m -g users -s /bin/bash sunny
+		-m：创建用户主目录/home/[用户名]；在自己的主目录内，即使不是root用户也可以读写文件、安装程序等等。
+		-g：设置用户初始组的名称或数字ID；该组必须是存在的；如果没有设置该选项，useradd会根据/etc/login.defs文件中的USERGROUPS_ENAB环境变量进行设置。
+		-G：用户要加入的附加组列表；使用逗号分隔多个组，不要添加空格；如果不设置，用户仅仅加入初始组。
+		-s：用户默认登录shell的路径；Arch Linux的init脚本使用bash；启动过程结束后，默认启动的登录shell在此处设定；请确保使用的shell已经安装。
+		以典型的桌面系统为例，要添加一个名为archie的用户，并使用bash作为登录shell：
+	# passwd sunny
+	查看用户信息存储：
+	# cat /etc/passwd
+	格式：account:password:UID:GID:GECOS:directory:shell
+
+
+9、软件包管理：
+	Pacman 是Arch的软件包管理器。
+	https://wiki.archlinux.org/index.php/Pacman_(%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87)
+
+	安装软件包：
+		# pacman -S packagename1 packagename2 ...
+
+	删除软件包：
+		# pacman -R packagename
+		删除指定软件包，及其所有没有被其他已安装软件包所使用的依赖关系：
+		# pacman -Rs package_name
+
+	升级软件包：
+		一个pacman命令就就可以升级整个系统。花费的时间取决于系统有多老。这个命令会同步本地(local)软件仓库并升级系统的软件包：
+		# pacman -Syu
+
+	查询包数据库:
+		# pacman -Q --help
+
+	下载而不安装：
+		# pacman -Sw package_name
+
+	安装一根本地包：
+		# pacman -U /path/to/package/package_name-version.pkg.tar.xz
+	
+	安装一个远程包:
+		# pacman -U http://www.example.com/repo/example.pkg.tar.xz
+
+
+10、图形用户界面：
+	安装 X:
+		安装基础的 Xorg 包：
+		# pacman -S xorg-server xorg-xinit xorg-utils xorg-server-utils
+		安装 mesa 以获得 3D 支持:
+		# pacman -S mesa
+	
+	安装显卡驱动：(如果是VirtualBox虚拟机安装，则不需安装先看驱动)
+		不知道显卡类型，执行命令查询：
+		# lspci | grep VGA
+		输入下面命令，查看所有开源驱动：
+		# pacman -Ss xf86-video | less
+		vesa 是一个支持大部分先看的通用驱动
+		# pacman -S xf86-video-vesa
+
+	安装输入设备:
+		# pacman -S xf86-input-synaptics
+
+	配置X:
+		测试X:
+			如果在测试中输入设备无法工作，请确保已经安装了xorg-drivers组中的必要驱动， 输入驱动的列表可以通过下面命令获得，按Q 退出命令。
+		# pacman -Ss x86-input | less
+		安装默认的测试环境：
+		# pacman -S xorg-twm xorg-xclock xterm
+		# startx
+		# exit
+
+11、安装桌面DE:
+	https://wiki.archlinux.org/index.php/Desktop_Environment_(%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87)
+
+
+
