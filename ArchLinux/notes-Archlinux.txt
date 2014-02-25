@@ -353,5 +353,22 @@
 11、安装桌面DE:
 	https://wiki.archlinux.org/index.php/Desktop_Environment_(%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87)
 
+	安装KDE:
+		完整安装:
+		# pacman -S kde 或者 pacman -S kde-meta
+		最小安装：
+		# pacman -S kdebase
+	
+	启动KDE:
+		使用xinitrc:
+		# vim ~/.xinitrc
+			exec startkde
+		# startx 或者 xinit 来启动 KDE
+
+	配置:
+		# vim ~/.kde4
+	
+	详情请查阅：
+		https://wiki.archlinux.org/index.php/KDE_(%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87)
 
 
