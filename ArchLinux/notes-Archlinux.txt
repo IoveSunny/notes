@@ -361,6 +361,8 @@
 	
 	启动KDE:
 		使用xinitrc:
+		# cp /etc/skel/.xinitrc ~
+		记得改权限，否则只能root用
 		# vim ~/.xinitrc
 			exec startkde
 		# startx 或者 xinit 来启动 KDE
@@ -372,3 +374,20 @@
 		https://wiki.archlinux.org/index.php/KDE_(%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87)
 
 
+12、引导时（开机启动）KDE:
+	手动启动 X 使用 startx，它会执行 ~/.xinitrc，可以定制成启动不同的窗口管理器，xinitrc 中有详细的介绍
+
+	Shell profile:
+	注意: 这种方式将在登陆 tty 启动 X，只有这样才能保持登录会话
+		如果使用Bash, 编辑 ~/.bash_profile,加入如下内容. 如果文件不存在，从 /etc/skel/.bash_profile 复制一个框架版本。
+		如果使用 zsh，则编辑 ~/.zprofile，
+			[[ -z $DISPLAY && $XDG_VTNR -eq 1 ]] && exec startx
+	
+	注意: 如果想在多个 VT 上使用图形登陆，可以将-eq 1修改为-le 3 (vt1 到 vt3)
+	注意: X 必须在登陆 TTY 启动，这样才能保持 logind 会话。默认的/etc/X11/xinit/xserverrc，已经进行了处理。
+
+	Tips:
+	此方法与automatic login to virtual console一起可以实现自动登陆。
+	如果 X 被关闭，用户将自动退出。要避免这个问题，删除 exec。
+	要将 X 会话的输出重定向到一个文件，请创建一个别名alias:
+	alias startx='startx &> ~/.xlog'
