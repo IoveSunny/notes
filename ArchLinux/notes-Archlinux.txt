@@ -161,7 +161,7 @@
 4、配置系统：
 	Locale:
 		中文系统：
-		# nano locale.gen
+		# nano /etc/locale.gen
 			en_US.UTF-8 UTF-8
 			zh_CN.UTF-8 UTF-8
 		# locale-gen
@@ -184,7 +184,7 @@
 		# ln -s /usr/share/zoneifo/Asia/Shanghai /etc/localtime
 	
 	硬件时间：
-		# hwlock --systohc --utc
+		# hwclock --systohc --utc
 
 	Hostname:
 		# echo we > /etc/hostname
@@ -329,6 +329,8 @@
 		# pacman -S xorg-server xorg-xinit xorg-utils xorg-server-utils
 		安装 mesa 以获得 3D 支持:
 		# pacman -S mesa
+		安装 Xorg-drivers:
+		# pacman -S xorg-drivers
 	
 	安装显卡驱动：(如果是VirtualBox虚拟机安装，则不需安装先看驱动)
 		不知道显卡类型，执行命令查询：
@@ -349,6 +351,14 @@
 		# pacman -S xorg-twm xorg-xclock xterm
 		# startx
 		# exit
+
+10.2、安装字体：
+	安装一个字体：
+	# pacman -S wqy-microhei
+
+	安装中英文字体：
+	# pacman -S ttf-dejavu
+	# pacman -S wqy-zenhei
 
 11、安装桌面DE:
 	https://wiki.archlinux.org/index.php/Desktop_Environment_(%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87)
