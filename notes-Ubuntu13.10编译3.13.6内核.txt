@@ -1,0 +1,38 @@
+## 本文地址：http://blog.csdn.net/sunnypotter/article/details/20808227
+## Author: sunnypotter
+## 参考: http://bbs.kafan.cn/thread-1572091-1-1.htm
+##
+# 安装编译环境即必要库
+sudo apt-get install build-essential
+sudo apt-get install libncurses5-dev
+
+# 下载3.13.6源码包
+wget https://www.kernel.org/pub/linux/kernel/v3.x/linux-3.13.6.tar.xz
+tar -Jxvf linux-3.13.6.tar.xz
+cd linux-3.13.6
+
+# 清除以前编译产生的文件；如果第一次可不用
+make mrproper
+
+# 可以复制原系统内核配置，可选
+cp /boot/config-3.11.0-12-generic .config
+
+# 运行配置文件
+make menuconfig
+
+# 编译内核和模块
+make bzImage
+make modules
+sudo make modules_install 
+sudo make install 
+
+# 可选择备份旧的内核
+mkdir kernel_backup
+mv *3.11.0* kernel_backup
+
+# 更新grub
+sudo update-grub
+
+# 如何删除编译安装的内核
+# 如果新内核工作不正常，删除/boot木和和/lib/modules下新内核相关的文件和目录
+# 再 sudo update-grub
