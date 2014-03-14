@@ -1,0 +1,52 @@
+# Author: SunnyPotter
+# Address：
+
+# 笔记本：Intel 3000 + Gefore.GT630
+# 装Nvidia驱动原因：
+#+	1、笔记本虽然自带独显驱动，但是支持不好，
+#+		su
+#+		cat /sys/kernel/debug/vgaswitcheroo/switch # 查看状态
+#+		echo IGD > /sys/kernel/debug/vgaswitcheroo/switch # 切换集成显卡
+#+		echo OFF > /sys/kernel/debug/vgaswitcheroo/switch  #关掉没有连接的其它显卡
+#+		cat /sys/kernel/debug/vgaswitcheroo/switch # 查看状态
+#+ (补充知识：IGD是集成显卡，DIS是独显; Pwr是开，OFF是关)
+#+	
+#+	但是上述方法似乎对我的笔记本不起作用;
+#
+#	2、独显在开机就一直启动，但不起作用，只发热，不给力
+#
+# 因此，希望关闭独显，或则让独显，自动控制; 装了官方驱动后，发现，可以自动控制，感觉良好，发热少了，风扇声音小了。。。
+# 
+# Now, Let's Begin
+
+
+# 操作系统Ubuntu-13.04
+# 安装 bumblebee 以管理双显卡;自动安装NVIDIA显卡驱动
+# sudo apt-get install nvidia-current nvidia-settings
+sudo add-apt-repository ppa:bumblebee/stable
+sudo apt-get update
+sudo apt-get install bumblebee bumblebee-nvidia
+
+# 不知为何，丢失了nvidia-xconfig这个命令
+#+ 现在安装
+sudo apt-get install nvidia-installer-cleanup
+sudo apt-get install nvidia-current nvidia-settings nvidia-xconfig
+sudo apt-get nvidia-xconfig
+
+sudo reboot
+
+# 查看显卡状态
+lspci | grep -i vga
+# 集显
+# 00:02.0 VGA compatible controller: Intel Corporation 2nd Generation Core Processor Family Integrated Graphics Controller (rev 09)
+# 独显
+# 01:00.0 VGA compatible controller: NVIDIA Corporation GF108M [GeForce GT 630M] (rev ff)
+
+# 分析：rev 09(数字)表示启用; rev ff表示关闭
+
+
+# 查看显卡驱动是否安装成功
+sudo optirun nvidia-settings -c :8
+
+# 配置
+sudo optirun nvidia-settings
