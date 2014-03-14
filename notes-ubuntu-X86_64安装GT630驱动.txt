@@ -32,6 +32,10 @@ sudo apt-get install bumblebee bumblebee-nvidia
 sudo apt-get install nvidia-installer-cleanup
 sudo apt-get install nvidia-current nvidia-settings nvidia-xconfig
 sudo apt-get nvidia-xconfig
+sudo update-grub
+# 如果上述nvidia-xconfig产生问题,执行一下命令
+# sudo cp /etc/X11/xorg.conf.backup /etc/X11/xorg.conf
+# sudo update-grub
 
 sudo reboot
 
@@ -44,12 +48,23 @@ lspci | grep -i vga
 
 # 分析：rev 09(数字)表示启用; rev ff表示关闭
 
+# 对比状态:
+sudo optirun glxspheres64
+# 同时打开新terminal
+lspci | grep -i vga
+
+# 独显状态：01:00.0 VGA compatible controller: NVIDIA Corporation GF108M [GeForce GT 630M] (rev a1)
+# rev a1 处于运行独显状态
+
 
 # 查看显卡驱动是否安装成功
 sudo optirun nvidia-settings -c :8
 
 # 配置
+# 存在问题,有待解决
+# 问题描述：You do not appear to be using the NVIDIA X driver.  Please edit your X configuration file (just run `nvidia-xconfig` as root), and restart the X server.
 sudo optirun nvidia-settings
+# 还好，不影响GT630运行
 
 # 以独显运行某个程序
 # sudo optirun 程序名字
